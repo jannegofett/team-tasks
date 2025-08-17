@@ -1,0 +1,54 @@
+---
+globs: *.tsx,*.ts,globals.css
+description: Tailwind CSS v4+ best practices and utility patterns
+---
+
+# Tailwind CSS v4+ Best Practices
+
+## Utility-First Approach
+- Use utility classes instead of custom CSS when possible
+- Combine utilities for complex designs
+- Use the `cn()` function for conditional classes
+- Leverage Tailwind's design system constraints
+
+## Responsive Design
+- Mobile-first approach: base styles, then `sm:`, `md:`, `lg:`, `xl:`, `2xl:`
+- Use consistent breakpoint strategy across components
+- Test responsive behavior at all breakpoints
+- Consider container queries for component-level responsiveness
+
+## Color System
+- Use semantic color names: `primary`, `secondary`, `accent`, `muted`
+- Leverage CSS custom properties for theming
+- Use color opacity modifiers: `bg-primary/20`
+- Maintain consistent color usage across the application
+
+## Spacing and Layout
+- Use consistent spacing scale: `space-y-4`, `gap-6`, `p-4`
+- Leverage Flexbox and Grid utilities: `flex`, `grid`, `items-center`
+- Use logical properties when appropriate: `ms-4` instead of `ml-4`
+- Implement proper container and max-width strategies
+
+## Component Styling
+- Extract repeated utility combinations into component classes
+- Use `@apply` directive sparingly in CSS files
+- Prefer utility classes in JSX over custom CSS
+- Maintain consistent component styling patterns
+
+## Performance Considerations
+- Use PurgeCSS configuration to remove unused styles
+- Optimize for production builds
+- Consider utility extraction for frequently used combinations
+- Monitor bundle size impact of utility usage
+
+## Dark Mode Implementation
+- Use `dark:` variant for dark mode styles
+- Implement proper color contrast in both modes
+- Test all components in both light and dark themes
+- Use CSS custom properties for theme-aware colors
+
+## Animation and Transitions
+- Use built-in transition utilities: `transition-all`, `duration-300`
+- Implement hover states with `hover:` variants
+- Use animation utilities for loading states and interactions
+- Consider reduced motion preferences: `motion-reduce:`

@@ -1,0 +1,60 @@
+---
+alwaysApply: true
+description: shadcn/ui component library guidelines and best practices
+---
+
+# shadcn/ui Component Guidelines
+
+## Component Architecture
+- All UI components are located in `components/ui/`
+- Use the New York style variant for consistent design
+- Components are built on top of Radix UI primitives
+- Always use TypeScript with proper prop interfaces
+
+## Installation and Setup
+- Use `npx shadcn@latest add <component>` to add new components
+- Components are copied into your codebase, not installed as dependencies
+- Customize components directly in `components/ui/` as needed
+- Use the CLI to maintain consistency: `npx shadcn@latest init`
+
+## Styling Conventions
+- Use Tailwind CSS classes for styling
+- Leverage CSS variables for theming (defined in `globals.css`)
+- Use `cn()` utility function for conditional classes: `cn("base-class", condition && "conditional-class")`
+- Follow the design system color palette (neutral base color)
+
+## Component Composition
+- Build complex UI by composing simple components
+- Use compound component patterns where appropriate
+- Implement proper accessibility with ARIA attributes
+- Use forwardRef for components that need DOM access
+
+## Form Components
+- Use React Hook Form with Zod validation
+- Implement proper form field composition with Form components
+- Use `@hookform/resolvers/zod` for schema validation
+- Follow the form pattern: Form, FormField, FormItem, FormLabel, FormControl, FormMessage
+
+## Theme Implementation
+- Use `next-themes` for dark/light mode switching
+- Define theme colors in CSS custom properties
+- Use the ThemeProvider wrapper in root layout
+- Implement theme toggle with proper accessibility
+
+## Icon Usage
+- Use Lucide React for all icons: `import { IconName } from "lucide-react"`
+- Keep icon sizing consistent (usually w-4 h-4 or w-5 h-5)
+- Use semantic icon names that match their purpose
+- Implement proper icon accessibility with aria-labels when needed
+
+## Component Customization
+- Modify components in `components/ui/` to fit project needs
+- Use Class Variance Authority (CVA) for component variants
+- Maintain consistent spacing and sizing scales
+- Follow the established design tokens and patterns
+
+## File Organization
+- Keep UI components in `components/ui/`
+- Store composed/feature components in `components/`
+- Use barrel exports for cleaner imports
+- Follow the established alias configuration from `components.json`

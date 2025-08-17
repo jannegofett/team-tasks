@@ -1,0 +1,54 @@
+---
+globs: *.tsx,*.ts
+description: React 19+ patterns and best practices for components
+---
+
+# React 19+ Patterns and Best Practices
+
+## Component Patterns
+- Use function components with TypeScript interfaces for props
+- Implement proper prop destructuring with default values
+- Use React.forwardRef for components that need DOM access
+- Prefer composition over inheritance
+
+## State Management
+- Use useState for local component state
+- Use useReducer for complex state logic
+- Implement custom hooks for reusable stateful logic
+- Use React Context sparingly, prefer prop drilling for simple cases
+
+## Performance Optimization
+- Use React.memo for expensive components
+- Implement useMemo for expensive calculations
+- Use useCallback for stable function references
+- Avoid creating objects/functions in render
+
+## Error Handling
+- Implement Error Boundaries for graceful error handling
+- Use try-catch in async functions
+- Provide meaningful error messages to users
+- Log errors appropriately for debugging
+
+## Accessibility
+- Use semantic HTML elements
+- Implement proper ARIA attributes
+- Ensure keyboard navigation works
+- Provide proper focus management
+
+## Code Organization
+- Keep components small and focused
+- Extract complex logic into custom hooks
+- Use proper TypeScript types for props and state
+- Follow consistent naming conventions
+
+## Event Handling
+- Use proper event types: `React.MouseEvent`, `React.ChangeEvent`, etc.
+- Implement proper form handling with controlled components
+- Use event delegation when appropriate
+- Prevent default behavior when necessary
+
+## Styling Integration
+- Use className prop for styling
+- Implement conditional styling with utility functions
+- Use CSS modules or Tailwind for styling
+- Maintain consistent spacing and typography

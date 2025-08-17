@@ -1,0 +1,54 @@
+---
+globs: *.ts,*.tsx
+description: TypeScript conventions and type safety best practices
+---
+
+# TypeScript Conventions and Best Practices
+
+## Type Definitions
+- Use interfaces for object shapes: `interface UserProps {}`
+- Use type aliases for unions and computed types: `type Status = 'loading' | 'success' | 'error'`
+- Define proper prop interfaces for React components
+- Use generic types for reusable components and functions
+
+## Import/Export Patterns
+- Use `import type` for type-only imports
+- Prefer named exports over default exports for utilities
+- Use default exports for React components
+- Organize imports: external libraries, internal modules, relative imports
+
+## Component Props
+- Define explicit prop interfaces with proper types
+- Use optional properties with `?` when appropriate
+- Implement proper children typing: `React.ReactNode`
+- Use generic props for flexible components
+
+## Event Handling
+- Use proper React event types: `React.MouseEvent<HTMLButtonElement>`
+- Type form events properly: `React.ChangeEvent<HTMLInputElement>`
+- Implement proper async event handlers
+- Use proper typing for custom event handlers
+
+## API and Data Types
+- Define interfaces for API responses
+- Use proper typing for form data and validation schemas
+- Implement type guards for runtime type checking
+- Use discriminated unions for complex state management
+
+## Utility Types
+- Leverage built-in utility types: `Partial<T>`, `Pick<T, K>`, `Omit<T, K>`
+- Create custom utility types when needed
+- Use `as const` for literal type inference
+- Implement proper type narrowing techniques
+
+## Error Handling
+- Type error objects properly
+- Use proper typing for try-catch blocks
+- Implement type-safe error boundaries
+- Define error type hierarchies when appropriate
+
+## Configuration
+- Use strict TypeScript configuration
+- Enable all recommended strict flags
+- Configure proper path mapping in `tsconfig.json`
+- Use consistent naming conventions for types and interfaces

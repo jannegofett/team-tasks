@@ -1,0 +1,48 @@
+---
+alwaysApply: true
+description: Next.js 15+ development guidelines and best practices
+---
+
+# Next.js 15+ Development Guidelines
+
+## App Router Structure
+- Use App Router (app directory) for all new development
+- File-based routing: `app/page.tsx`, `app/layout.tsx`, `app/loading.tsx`, `app/error.tsx`
+- Use Server Components by default, add 'use client' only when needed
+- Colocate components in feature directories under `app/`
+
+## TypeScript Configuration
+- Always use TypeScript with strict mode enabled
+- Use `import type` for type-only imports
+- Define proper interfaces for props and API responses
+- Use generic types for reusable components
+
+## Performance Optimizations
+- Use dynamic imports for code splitting: `const Component = dynamic(() => import('./Component'))`
+- Implement proper loading states with `loading.tsx`
+- Use Next.js Image component for all images: `import Image from 'next/image'`
+- Enable Turbopack for development: `next dev --turbopack`
+
+## Data Fetching
+- Use Server Components for data fetching when possible
+- Use `fetch` with proper caching strategies
+- Implement error boundaries with `error.tsx`
+- Use Suspense boundaries for streaming
+
+## Routing and Navigation
+- Use `useRouter` from 'next/navigation' for App Router
+- Use `Link` component for client-side navigation
+- Implement proper route groups with `(groupName)` folders
+- Use parallel routes `@folder` for complex layouts
+
+## Environment and Configuration
+- Store environment variables in `.env.local`
+- Use `NEXT_PUBLIC_` prefix for client-side variables
+- Configure proper TypeScript paths in `tsconfig.json`
+- Use `next.config.ts` for Next.js configuration
+
+## SEO and Metadata
+- Use the new Metadata API in `layout.tsx` and `page.tsx`
+- Implement proper Open Graph and Twitter cards
+- Use `generateMetadata` for dynamic metadata
+- Add proper structured data with JSON-LD

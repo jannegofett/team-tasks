@@ -1,0 +1,76 @@
+---
+alwaysApply: true
+description: Project structure and file organization guidelines
+---
+
+# Project Structure Guidelines
+
+## Directory Organization
+```
+app/                    # Next.js App Router pages
+├── (routes)/          # Route groups
+├── api/               # API routes
+├── globals.css        # Global styles
+├── layout.tsx         # Root layout
+└── page.tsx           # Home page
+
+components/            # React components
+├── ui/                # shadcn/ui components
+├── forms/             # Form components
+├── layout/            # Layout components
+└── features/          # Feature-specific components
+
+lib/                   # Utility libraries
+├── utils.ts           # General utilities
+├── validations.ts     # Zod schemas
+├── api.ts             # API utilities
+└── constants.ts       # App constants
+
+hooks/                 # Custom React hooks
+types/                 # TypeScript type definitions
+public/                # Static assets
+```
+
+## File Naming Conventions
+- Use kebab-case for files: `user-profile.tsx`
+- Use PascalCase for React components: `UserProfile`
+- Use camelCase for functions and variables
+- Use UPPER_CASE for constants and environment variables
+
+## Component Organization
+- One component per file
+- Colocate related components in feature directories
+- Use index files for barrel exports
+- Keep component files focused and small (< 200 lines)
+
+## Import Organization
+```typescript
+// External libraries
+import React from 'react'
+import { NextPage } from 'next'
+
+// Internal modules
+import { Button } from '@/components/ui/button'
+import { api } from '@/lib/api'
+
+// Relative imports
+import './component.css'
+```
+
+## Configuration Files
+- Keep all config files in project root
+- Use TypeScript for Next.js config: `next.config.ts`
+- Maintain consistent formatting across config files
+- Document complex configuration options
+
+## Asset Management
+- Store static assets in `public/` directory
+- Use Next.js Image optimization for all images
+- Organize assets by type: `public/images/`, `public/icons/`
+- Use proper file naming for assets
+
+## Environment Configuration
+- Use `.env.local` for local development
+- Use `.env.example` to document required variables
+- Prefix client-side variables with `NEXT_PUBLIC_`
+- Never commit sensitive environment variables

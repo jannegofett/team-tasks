@@ -2,6 +2,12 @@ import { eq, asc } from 'drizzle-orm';
 import { db } from './index';
 import { columns, tasks, assignees, type NewColumn, type NewTask, type NewAssignee } from './schema';
 
+// Configurable artificial delay for simulating network latency (in milliseconds)
+export const ARTIFICIAL_DELAY = 3000;
+
+// Helper function to add artificial delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Type for joined query results
 export type TaskWithRelations = {
   tasks: {
@@ -34,6 +40,7 @@ export type TaskWithRelations = {
 
 // Column queries
 export const getColumns = async () => {
+  await delay(ARTIFICIAL_DELAY);
   return await db.select().from(columns).orderBy(asc(columns.orderIndex));
 };
 
@@ -53,6 +60,7 @@ export const deleteColumn = async (id: string) => {
 
 // Task queries
 export const getTasks = async () => {
+  await delay(ARTIFICIAL_DELAY);
   return await db
     .select({
       tasks: {

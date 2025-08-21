@@ -1,18 +1,16 @@
 import { ThemeToggle } from "@/components/theme-toggle"
-import { INITIAL_TASKS } from "@/lib/constants"
+import { fetchColumns, fetchTasks } from "@/lib/actions"
 import KanbanBoard from "@/components/kanban-board"
 
-// Server-side data fetching functions
-async function getTasks() {
-  // This would eventually fetch from your database
-  // For now, return the mock data after a small delay to simulate async
-  await new Promise(resolve => setTimeout(resolve, 100))
-  return INITIAL_TASKS
-}
-
 const Home = async () => {
-  // Fetch data on the server
-  const initialTasks = await getTasks()
+  // Fetch data on the server using server actions
+  const [columnsResult, tasksResult] = await Promise.all([
+    fetchColumns(),
+    fetchTasks()
+  ])
+
+  const columns = columnsResult.success && columnsResult.data ? columnsResult.data : []
+  const tasks = tasksResult.success && tasksResult.data ? tasksResult.data : []
 
   return (
     <div className="min-h-screen bg-background">
@@ -24,7 +22,7 @@ const Home = async () => {
       </header>
       
       <main className="container mx-auto px-4 py-8">
-        <KanbanBoard initialTasks={initialTasks} />
+        <KanbanBoard columns={columns} tasks={tasks} />
       </main>
     </div>
   )

@@ -98,7 +98,7 @@ const TaskCard = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleEdit}>
-                  <Edit className="mr-2 h-4 w-4" />
+                                      <Edit className="me-2 h-4 w-4" />
                   Edit Task
                 </DropdownMenuItem>
               </DropdownMenuContent>

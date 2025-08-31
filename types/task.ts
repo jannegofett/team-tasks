@@ -12,6 +12,7 @@ export interface Task {
   title: string
   description?: string
   status: TaskStatus
+  columnId: string
   assignee?: Assignee
 }
 
@@ -21,7 +22,7 @@ export interface TaskFormData {
   assigneeId?: string
 }
 
-export interface TaskCreateData extends TaskFormData {}
+export type TaskCreateData = TaskFormData
 
 export interface TaskUpdateData extends TaskFormData {
   id: string

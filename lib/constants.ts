@@ -57,6 +57,7 @@ export const INITIAL_TASKS: Task[] = [
     title: "Design new landing page",
     description: "Create wireframes and mockups for the new landing page",
     status: "todo",
+    columnId: "todo-column",
     assignee: MOCK_ASSIGNEES[0]
   },
   {
@@ -64,6 +65,7 @@ export const INITIAL_TASKS: Task[] = [
     title: "Implement user authentication",
     description: "Set up login and registration functionality",
     status: "todo",
+    columnId: "todo-column",
     assignee: MOCK_ASSIGNEES[1]
   },
   {
@@ -71,19 +73,22 @@ export const INITIAL_TASKS: Task[] = [
     title: "Fix responsive design issues",
     description: "Address mobile layout problems on the dashboard",
     status: "in-progress",
+    columnId: "in-progress-column",
     assignee: MOCK_ASSIGNEES[2]
   },
   {
     id: "task-4",
     title: "Write API documentation",
     description: "Document all REST endpoints for the API",
-    status: "in-progress"
+    status: "in-progress",
+    columnId: "in-progress-column"
   },
   {
     id: "task-5",
     title: "Set up CI/CD pipeline",
     description: "Configure automated testing and deployment",
     status: "done",
+    columnId: "done-column",
     assignee: MOCK_ASSIGNEES[3]
   },
   {
@@ -91,6 +96,7 @@ export const INITIAL_TASKS: Task[] = [
     title: "Database optimization",
     description: "Improve query performance and add indexes",
     status: "done",
+    columnId: "done-column",
     assignee: MOCK_ASSIGNEES[0]
   }
 ] as const

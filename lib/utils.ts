@@ -23,6 +23,6 @@ export function getStatusColor(status: TaskStatus): string {
     case "done":
       return "bg-green-100 text-green-700 hover:bg-green-200"
     default:
-      return "bg-gray-100 text-gray-700"
+      return "bg-neutral-100 text-neutral-700"
   }
 }

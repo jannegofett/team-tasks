@@ -1,21 +1,21 @@
 "use client"
 
 import { useState, useCallback, useMemo } from "react"
-import type { Task, TaskFormData } from "@/types/task"
+import type { Task, Assignee } from "@/types/task"
 import type { Column } from "@/lib/db/schema"
 import type { TaskWithRelations } from "@/lib/db/queries"
 import KanbanColumn from "./kanban-column"
 import TaskDialog from "./task-dialog"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
-import { MOCK_ASSIGNEES } from "@/lib/constants"
 
 interface KanbanBoardProps {
   columns: Column[]
   tasks: TaskWithRelations[]
+  assignees: Assignee[]
 }
 
-const KanbanBoard = ({ columns, tasks }: KanbanBoardProps) => {
+const KanbanBoard = ({ columns, tasks, assignees }: KanbanBoardProps) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   // Transform the joined query results to match our Task type
@@ -25,6 +25,7 @@ const KanbanBoard = ({ columns, tasks }: KanbanBoardProps) => {
       title: task.tasks.title,
       description: task.tasks.description || undefined, // Convert null to undefined
       status: task.tasks.status,
+      columnId: task.tasks.columnId, // Add columnId to the transformed task
       assignee: task.assignees ? {
         id: task.assignees.id,
         name: task.assignees.name,
@@ -39,19 +40,8 @@ const KanbanBoard = ({ columns, tasks }: KanbanBoardProps) => {
     console.log('Assignee change:', taskId, assigneeId)
   }, [])
 
-  const handleTaskCreate = useCallback((values: TaskFormData) => {
-    // This will be implemented later with server actions
-    console.log('Task create:', values)
-  }, [])
-
   const handleTaskEdit = useCallback((task: Task) => {
     setEditingTask(task)
-  }, [])
-
-  const handleTaskUpdate = useCallback((values: TaskFormData & { id?: string }) => {
-    // This will be implemented later with server actions
-    console.log('Task update:', values)
-    setEditingTask(null)
   }, [])
 
   const handleCloseEditDialog = useCallback(() => {
@@ -62,14 +52,8 @@ const KanbanBoard = ({ columns, tasks }: KanbanBoardProps) => {
   const tasksByColumn = useMemo(() => {
     const grouped: Record<string, Task[]> = {}
     columns.forEach(column => {
-      // Map column titles to status values
-      const statusMap: Record<string, string> = {
-        'To Do': 'todo',
-        'In Progress': 'in-progress',
-        'Done': 'done'
-      }
-      const expectedStatus = statusMap[column.title]
-      grouped[column.id] = transformedTasks.filter(task => task.status === expectedStatus)
+      // Group tasks by columnId instead of status
+      grouped[column.id] = transformedTasks.filter(task => task.columnId === column.id)
     })
     return grouped
   }, [columns, transformedTasks])
@@ -79,8 +63,7 @@ const KanbanBoard = ({ columns, tasks }: KanbanBoardProps) => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Team Tasks</h1>
         <TaskDialog
-          availableAssignees={MOCK_ASSIGNEES}
-          onSubmit={handleTaskCreate}
+          availableAssignees={assignees}
         >
           <Button className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
@@ -98,7 +81,7 @@ const KanbanBoard = ({ columns, tasks }: KanbanBoardProps) => {
               title={column.title} 
               tasks={columnTasks} 
               count={columnTasks.length}
-              availableAssignees={MOCK_ASSIGNEES}
+              availableAssignees={assignees}
               onAssigneeChange={handleAssigneeChange}
               onTaskEdit={handleTaskEdit}
             />
@@ -110,8 +93,7 @@ const KanbanBoard = ({ columns, tasks }: KanbanBoardProps) => {
       {editingTask && (
         <TaskDialog
           task={editingTask}
-          availableAssignees={MOCK_ASSIGNEES}
-          onSubmit={handleTaskUpdate}
+          availableAssignees={assignees}
           open={!!editingTask}
           onOpenChange={(open) => !open && handleCloseEditDialog()}
         />

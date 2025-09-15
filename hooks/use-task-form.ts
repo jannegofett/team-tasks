@@ -1,20 +1,19 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useState, useEffect } from "react"
-import type { Task, TaskFormData } from "@/types/task"
-import { createNewTask } from "@/lib/actions"
+import type { Task } from "@/types/task"
+import { createNewTask, updateTask } from "@/lib/actions"
 import { toast } from "sonner"
 import { createTaskSchema, type TaskFormValues } from "@/lib/validations"
 import type { ZodIssue } from "zod"
 
 interface UseTaskFormProps {
   task?: Task
-  onSubmit?: (values: TaskFormData & { id?: string }) => void
   onSuccess?: () => void
   defaultColumnId?: string
 }
 
-export function useTaskForm({ task, onSubmit, onSuccess, defaultColumnId }: UseTaskFormProps) {
+export function useTaskForm({ task, onSuccess, defaultColumnId }: UseTaskFormProps) {
   const isEditing = !!task
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -24,7 +23,7 @@ export function useTaskForm({ task, onSubmit, onSuccess, defaultColumnId }: UseT
       title: task?.title || "",
       description: task?.description || "",
       assigneeId: task?.assignee?.id || "unassigned",
-      columnId: defaultColumnId || "", // Use passed columnId or empty string
+      columnId: task?.columnId || defaultColumnId || "", // Use task's columnId first, then default
     },
   })
 
@@ -39,15 +38,53 @@ export function useTaskForm({ task, onSubmit, onSuccess, defaultColumnId }: UseT
     if (isSubmitting) return // Prevent multiple submissions
     
     if (isEditing) {
-      // Handle editing (will be implemented later)
-      const processedValues = {
-        ...values,
-        assigneeId: values.assigneeId === "unassigned" ? undefined : values.assigneeId,
-        id: task.id,
+      // Handle editing
+      setIsSubmitting(true)
+      try {
+        const formData = new FormData()
+        formData.append('title', values.title)
+        if (values.description) {
+          formData.append('description', values.description)
+        }
+        if (values.assigneeId && values.assigneeId !== 'unassigned') {
+          formData.append('assigneeId', values.assigneeId)
+        }
+        formData.append('columnId', values.columnId)
+
+        const result = await updateTask(task.id, formData)
+        
+        if (result.success) {
+          toast.success("Task updated successfully!")
+          onSuccess?.()
+        } else {
+          // Show error toast with more specific message
+          if (result.error === 'Invalid assignee selected') {
+            toast.error("Please select a valid assignee")
+          } else if (result.error === 'Invalid column selected') {
+            toast.error("Please select a valid column")
+          } else {
+            toast.error(result.error || "Failed to update task")
+          }
+          
+          // Handle validation errors
+          if (result.details) {
+            result.details.forEach((issue: ZodIssue) => {
+              if (issue.path && issue.path.length > 0) {
+                const fieldName = issue.path[0] as keyof TaskFormValues
+                form.setError(fieldName, {
+                  type: 'manual',
+                  message: issue.message
+                })
+              }
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error updating task:', error)
+        toast.error("An unexpected error occurred")
+      } finally {
+        setIsSubmitting(false)
       }
-      onSubmit?.(processedValues)
-      toast.success("Task updated successfully!")
-      form.reset()
       return
     }
 
@@ -108,7 +145,7 @@ export function useTaskForm({ task, onSubmit, onSuccess, defaultColumnId }: UseT
       title: task?.title || "",
       description: task?.description || "",
       assigneeId: task?.assignee?.id || "unassigned",
-      columnId: defaultColumnId || "", // Use passed columnId or empty string
+      columnId: task?.columnId || defaultColumnId || "", // Use task's columnId first, then default
     })
   }
 

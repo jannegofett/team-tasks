@@ -87,7 +87,7 @@ export const getTasks = async () => {
     .from(tasks)
     .leftJoin(assignees, eq(tasks.assigneeId, assignees.id))
     .leftJoin(columns, eq(tasks.columnId, columns.id))
-    .orderBy(asc(tasks.orderIndex));
+    .orderBy(asc(columns.orderIndex), asc(tasks.orderIndex));
 };
 
 export const getTasksByColumn = async (columnId: string) => {

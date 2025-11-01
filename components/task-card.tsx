@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { useDraggable } from "@dnd-kit/core"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { User, Edit3, MoreVertical, Edit, Trash2 } from "lucide-react"
+import { User, Edit3, MoreVertical, Edit, Trash2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react"
 import type { Task, Assignee } from "@/types/task"
+import type { Column } from "@/lib/db/schema"
 import { getStatusColor, getInitials } from "@/lib/utils"
-import { deleteTaskAction } from "@/lib/actions"
+import { deleteTaskAction, moveTaskAction } from "@/lib/actions"
 import { toast } from "sonner"
 import {
   DropdownMenu,
@@ -38,13 +40,23 @@ export type { Task, Assignee, TaskStatus } from "@/types/task"
 
 interface TaskCardProps {
   task: Task
+  taskIndex: number
+  currentColumnId: string
+  currentColumnIndex: number
+  allColumns: Column[]
+  allTasks: Task[]
   availableAssignees?: Assignee[]
   onAssigneeChange?: (taskId: string, assigneeId: string | null) => void
   onEdit?: (task: Task) => void
 }
 
 const TaskCard = ({ 
-  task, 
+  task,
+  taskIndex,
+  currentColumnId,
+  currentColumnIndex,
+  allColumns,
+  allTasks,
   availableAssignees = [],
   onAssigneeChange,
   onEdit 
@@ -52,6 +64,15 @@ const TaskCard = ({
   const [isEditingAssignee, setIsEditingAssignee] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isMoving, setIsMoving] = useState(false)
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task.id,
+  })
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined
 
   const handleAssigneeChange = useCallback((assigneeId: string) => {
     const newAssigneeId = assigneeId === "unassigned" ? null : assigneeId
@@ -91,10 +112,81 @@ const TaskCard = ({
     setIsDeleteDialogOpen(true)
   }, [])
 
+  const handleMove = useCallback(async (direction: 'left' | 'right' | 'top' | 'bottom') => {
+    setIsMoving(true)
+    
+    let targetColumnId = currentColumnId
+    let targetIndex = taskIndex
+
+    try {
+      if (direction === 'left') {
+        // Move to previous column
+        if (currentColumnIndex > 0) {
+          targetColumnId = allColumns[currentColumnIndex - 1].id
+          const tasksInTargetColumn = allTasks.filter(t => t.columnId === targetColumnId)
+          targetIndex = tasksInTargetColumn.length
+        } else {
+          toast.error("Already at the first column")
+          setIsMoving(false)
+          return
+        }
+      } else if (direction === 'right') {
+        // Move to next column
+        if (currentColumnIndex < allColumns.length - 1) {
+          targetColumnId = allColumns[currentColumnIndex + 1].id
+          const tasksInTargetColumn = allTasks.filter(t => t.columnId === targetColumnId)
+          targetIndex = tasksInTargetColumn.length
+        } else {
+          toast.error("Already at the last column")
+          setIsMoving(false)
+          return
+        }
+      } else if (direction === 'top') {
+        // Move up in same column
+        const tasksInColumn = allTasks.filter(t => t.columnId === currentColumnId)
+        if (taskIndex > 0) {
+          targetIndex = tasksInColumn[taskIndex - 1].orderIndex
+        } else {
+          toast.error("Already at the top")
+          setIsMoving(false)
+          return
+        }
+      } else if (direction === 'bottom') {
+        // Move down in same column
+        const tasksInColumn = allTasks.filter(t => t.columnId === currentColumnId)
+        if (taskIndex < tasksInColumn.length - 1) {
+          targetIndex = tasksInColumn[taskIndex + 1].orderIndex
+        } else {
+          toast.error("Already at the bottom")
+          setIsMoving(false)
+          return
+        }
+      }
+
+      const result = await moveTaskAction(task.id, targetColumnId, targetIndex)
+      
+      if (result.success) {
+        toast.success("Task moved successfully!")
+      } else {
+        toast.error(result.error || "Failed to move task")
+      }
+    } catch {
+      toast.error("An unexpected error occurred")
+    } finally {
+      setIsMoving(false)
+    }
+  }, [task.id, currentColumnId, currentColumnIndex, taskIndex, allColumns, allTasks])
+
   // The Select component handles its own open/close behavior
 
   return (
-    <Card className="cursor-move hover:shadow-lg transition-all duration-200 group">
+    <Card 
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`cursor-move hover:shadow-lg transition-all duration-200 group ${isDragging ? 'opacity-50' : ''}`}
+    >
       <CardHeader className="pb-4 space-y-3">
         <div className="flex items-start justify-between">
           <CardTitle className="text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
@@ -117,13 +209,29 @@ const TaskCard = ({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleEdit} disabled={isDeleting}>
+                <DropdownMenuItem onClick={handleEdit} disabled={isDeleting || isMoving}>
                   <Edit className="me-2 h-4 w-4" />
                   Edit Task
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleMove('left')} disabled={isDeleting || isMoving || currentColumnIndex === 0}>
+                  <ChevronLeft className="me-2 h-4 w-4" />
+                  Move Left
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleMove('right')} disabled={isDeleting || isMoving || currentColumnIndex === allColumns.length - 1}>
+                  <ChevronRight className="me-2 h-4 w-4" />
+                  Move Right
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleMove('top')} disabled={isDeleting || isMoving || taskIndex === 0}>
+                  <ChevronUp className="me-2 h-4 w-4" />
+                  Move Up
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleMove('bottom')} disabled={isDeleting || isMoving}>
+                  <ChevronDown className="me-2 h-4 w-4" />
+                  Move Down
+                </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={handleDeleteClick} 
-                  disabled={isDeleting}
+                  disabled={isDeleting || isMoving}
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="me-2 h-4 w-4" />

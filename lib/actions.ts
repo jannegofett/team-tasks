@@ -372,3 +372,91 @@ export async function deleteTaskAction(taskId: string) {
     return { success: false, error: 'Failed to delete task' }
   }
 }
+
+export async function moveTaskAction(taskId: string, targetColumnId: string, newOrderIndex: number) {
+  try {
+    console.log('Moving task:', taskId, 'to column:', targetColumnId, 'at index:', newOrderIndex)
+
+    // Get all tasks to find the one being moved
+    const allTasks = await getTasks()
+    const taskData = allTasks.find(t => t.tasks.id === taskId)
+    
+    if (!taskData) {
+      console.error('Task not found:', taskId)
+      return { success: false, error: 'Task not found' }
+    }
+
+    // Get columns to determine status
+    const columns = await getColumns()
+    
+    // Map column title to status
+    const getStatusFromColumn = (columnId: string, columns: Column[]): 'todo' | 'in-progress' | 'done' => {
+      const column = columns.find(col => col.id === columnId)
+      if (!column) {
+        console.error('Column not found for ID:', columnId)
+        return 'todo'
+      }
+      
+      // Map column titles to status values
+      const statusMap: Record<string, 'todo' | 'in-progress' | 'done'> = {
+        'To Do': 'todo',
+        'In Progress': 'in-progress', 
+        'Done': 'done'
+      }
+      
+      const status = statusMap[column.title]
+      if (!status) {
+        console.error('Unknown column title:', column.title, 'mapping to default status: todo')
+        return 'todo'
+      }
+      
+      return status
+    }
+
+    const newStatus = getStatusFromColumn(targetColumnId, columns)
+    const oldColumnId = taskData.tasks.columnId
+    const oldOrderIndex = taskData.tasks.orderIndex
+    
+    // If moving within the same column, we need to swap indices
+    if (oldColumnId === targetColumnId) {
+      // Find the task at the target index
+      const tasksInColumn = allTasks.filter(t => t.tasks.columnId === targetColumnId)
+      const targetTask = tasksInColumn.find(t => t.tasks.orderIndex === newOrderIndex)
+      
+      if (targetTask && targetTask.tasks.id !== taskId) {
+        // Swap the indices
+        await updateTaskQuery(targetTask.tasks.id, {
+          orderIndex: oldOrderIndex,
+        })
+      }
+    } else {
+      // Moving to a different column - shift existing tasks
+      const tasksInTargetColumn = allTasks.filter(t => t.tasks.columnId === targetColumnId)
+      
+      // Shift tasks at and after the target index
+      for (const task of tasksInTargetColumn) {
+        if (task.tasks.orderIndex >= newOrderIndex) {
+          await updateTaskQuery(task.tasks.id, {
+            orderIndex: task.tasks.orderIndex + 1,
+          })
+        }
+      }
+    }
+    
+    // Update the moved task
+    await updateTaskQuery(taskId, {
+      columnId: targetColumnId,
+      status: newStatus,
+      orderIndex: newOrderIndex,
+    })
+    
+    console.log('Task moved successfully')
+    
+    revalidatePath('/')
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error moving task:', error)
+    return { success: false, error: 'Failed to move task' }
+  }
+}

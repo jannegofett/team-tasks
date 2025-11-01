@@ -13,6 +13,7 @@ export interface Task {
   description?: string
   status: TaskStatus
   columnId: string
+  orderIndex: number
   assignee?: Assignee
 }
 

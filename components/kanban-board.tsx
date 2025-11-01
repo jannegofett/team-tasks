@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import type { Task, Assignee } from "@/types/task"
 import type { Column } from "@/lib/db/schema"
 import type { TaskWithRelations } from "@/lib/db/queries"
@@ -9,7 +10,7 @@ import TaskDialog from "./task-dialog"
 import ColumnDialog from "./column-dialog"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
-import { updateTaskAssignee } from "@/lib/actions"
+import { updateTaskAssignee, moveTaskAction } from "@/lib/actions"
 import { toast } from "sonner"
 
 interface KanbanBoardProps {
@@ -20,6 +21,12 @@ interface KanbanBoardProps {
 
 const KanbanBoard = ({ columns, tasks, assignees }: KanbanBoardProps) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [activeTask, setActiveTask] = useState<Task | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Transform the joined query results to match our Task type
   const transformedTasks: Task[] = useMemo(() => {
@@ -29,6 +36,7 @@ const KanbanBoard = ({ columns, tasks, assignees }: KanbanBoardProps) => {
       description: task.tasks.description || undefined, // Convert null to undefined
       status: task.tasks.status,
       columnId: task.tasks.columnId, // Add columnId to the transformed task
+      orderIndex: task.tasks.orderIndex,
       assignee: task.assignees ? {
         id: task.assignees.id,
         name: task.assignees.name,
@@ -37,6 +45,52 @@ const KanbanBoard = ({ columns, tasks, assignees }: KanbanBoardProps) => {
       } : undefined
     }))
   }, [tasks])
+
+  // Setup drag sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  )
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const task = transformedTasks.find(t => t.id === event.active.id)
+    setActiveTask(task || null)
+  }, [transformedTasks])
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    setActiveTask(null)
+    
+    const { active, over } = event
+    
+    if (!over || active.id === over.id) return
+
+    const taskId = active.id as string
+    const newColumnId = over.id as string
+
+    // Find the task being moved
+    const task = transformedTasks.find(t => t.id === taskId)
+    if (!task) return
+
+    // Find the target column
+    const targetColumn = columns.find(c => c.id === newColumnId)
+    if (!targetColumn) return
+
+    // Get tasks in target column
+    const tasksInTargetColumn = transformedTasks.filter(t => t.columnId === newColumnId)
+    const newOrderIndex = tasksInTargetColumn.length
+
+    // Call the server action to move the task
+    const result = await moveTaskAction(taskId, newColumnId, newOrderIndex)
+    
+    if (result.success) {
+      toast.success("Task moved successfully!")
+    } else {
+      toast.error(result.error || "Failed to move task")
+    }
+  }, [transformedTasks, columns])
 
   const handleAssigneeChange = useCallback(async (taskId: string, assigneeId: string | null) => {
     try {
@@ -65,62 +119,134 @@ const KanbanBoard = ({ columns, tasks, assignees }: KanbanBoardProps) => {
   const tasksByColumn = useMemo(() => {
     const grouped: Record<string, Task[]> = {}
     columns.forEach(column => {
-      // Group tasks by columnId instead of status
-      grouped[column.id] = transformedTasks.filter(task => task.columnId === column.id)
+      // Group tasks by columnId and sort by orderIndex
+      grouped[column.id] = transformedTasks
+        .filter(task => task.columnId === column.id)
+        .sort((a, b) => a.orderIndex - b.orderIndex)
     })
     return grouped
   }, [columns, transformedTasks])
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Team Tasks</h1>
-        <div className="flex items-center gap-2">
-          <ColumnDialog>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Column
-            </Button>
-          </ColumnDialog>
-          <TaskDialog
-            availableAssignees={assignees}
-          >
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Task
-            </Button>
-          </TaskDialog>
-        </div>
-      </div>
-      
-      <div className="flex gap-6 h-full min-h-[600px]">
-        {columns.map((column) => {
-          const columnTasks = tasksByColumn[column.id] || []
-          return (
-            <KanbanColumn 
-              key={column.id}
-              columnId={column.id}
-              title={column.title} 
-              tasks={columnTasks} 
-              count={columnTasks.length}
+  if (!isMounted) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">Team Tasks</h1>
+          <div className="flex items-center gap-2">
+            <ColumnDialog>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Column
+              </Button>
+            </ColumnDialog>
+            <TaskDialog
               availableAssignees={assignees}
-              onAssigneeChange={handleAssigneeChange}
-              onTaskEdit={handleTaskEdit}
-            />
-          )
-        })}
+            >
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Task
+              </Button>
+            </TaskDialog>
+          </div>
+        </div>
+        
+        <div className="flex gap-6 h-full min-h-[600px]">
+          {columns.map((column, columnIndex) => {
+            const columnTasks = tasksByColumn[column.id] || []
+            return (
+              <KanbanColumn 
+                key={column.id}
+                columnId={column.id}
+                columnIndex={columnIndex}
+                title={column.title} 
+                tasks={columnTasks} 
+                count={columnTasks.length}
+                allColumns={columns}
+                allTasks={transformedTasks}
+                availableAssignees={assignees}
+                onAssigneeChange={handleAssigneeChange}
+                onTaskEdit={handleTaskEdit}
+              />
+            )
+          })}
+        </div>
+
+        {/* Edit Task Dialog */}
+        {editingTask && (
+          <TaskDialog
+            task={editingTask}
+            availableAssignees={assignees}
+            open={!!editingTask}
+            onOpenChange={(open) => !open && handleCloseEditDialog()}
+          />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">Team Tasks</h1>
+          <div className="flex items-center gap-2">
+            <ColumnDialog>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Column
+              </Button>
+            </ColumnDialog>
+            <TaskDialog
+              availableAssignees={assignees}
+            >
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Task
+              </Button>
+            </TaskDialog>
+          </div>
+        </div>
+        
+        <div className="flex gap-6 h-full min-h-[600px]">
+          {columns.map((column, columnIndex) => {
+            const columnTasks = tasksByColumn[column.id] || []
+            return (
+              <KanbanColumn 
+                key={column.id}
+                columnId={column.id}
+                columnIndex={columnIndex}
+                title={column.title} 
+                tasks={columnTasks} 
+                count={columnTasks.length}
+                allColumns={columns}
+                allTasks={transformedTasks}
+                availableAssignees={assignees}
+                onAssigneeChange={handleAssigneeChange}
+                onTaskEdit={handleTaskEdit}
+              />
+            )
+          })}
+        </div>
+
+        {/* Edit Task Dialog */}
+        {editingTask && (
+          <TaskDialog
+            task={editingTask}
+            availableAssignees={assignees}
+            open={!!editingTask}
+            onOpenChange={(open) => !open && handleCloseEditDialog()}
+          />
+        )}
       </div>
 
-      {/* Edit Task Dialog */}
-      {editingTask && (
-        <TaskDialog
-          task={editingTask}
-          availableAssignees={assignees}
-          open={!!editingTask}
-          onOpenChange={(open) => !open && handleCloseEditDialog()}
-        />
-      )}
-    </div>
+      <DragOverlay>
+        {activeTask && (
+          <div className="p-4 bg-background border rounded-lg shadow-lg">
+            <h3 className="font-medium">{activeTask.title}</h3>
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
   )
 }
 

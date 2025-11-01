@@ -67,6 +67,11 @@ export const columnSchema = z.object({
   orderIndex: z.number(),
 })
 
+// Create column schema for server actions
+export const createColumnSchema = z.object({
+  title: z.string().min(1, "Title is required").max(255, "Title must be less than 255 characters"),
+})
+
 // Assignee schema
 export const assigneeSchema = z.object({
   id: z.string(),
@@ -81,4 +86,5 @@ export type CreateTaskData = z.infer<typeof createTaskSchema>
 export type UpdateTaskData = z.infer<typeof updateTaskSchema>
 export type MoveTaskData = z.infer<typeof moveTaskSchema>
 export type ColumnData = z.infer<typeof columnSchema>
+export type CreateColumnData = z.infer<typeof createColumnSchema>
 export type AssigneeData = z.infer<typeof assigneeSchema>

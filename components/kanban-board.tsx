@@ -6,8 +6,11 @@ import type { Column } from "@/lib/db/schema"
 import type { TaskWithRelations } from "@/lib/db/queries"
 import KanbanColumn from "./kanban-column"
 import TaskDialog from "./task-dialog"
+import ColumnDialog from "./column-dialog"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
+import { updateTaskAssignee } from "@/lib/actions"
+import { toast } from "sonner"
 
 interface KanbanBoardProps {
   columns: Column[]
@@ -35,9 +38,19 @@ const KanbanBoard = ({ columns, tasks, assignees }: KanbanBoardProps) => {
     }))
   }, [tasks])
 
-  const handleAssigneeChange = useCallback((taskId: string, assigneeId: string | null) => {
-    // This will be implemented later with server actions
-    console.log('Assignee change:', taskId, assigneeId)
+  const handleAssigneeChange = useCallback(async (taskId: string, assigneeId: string | null) => {
+    try {
+      const result = await updateTaskAssignee(taskId, assigneeId)
+      
+      if (result.success) {
+        toast.success("Assignee updated successfully!")
+      } else {
+        toast.error(result.error || "Failed to update assignee")
+      }
+    } catch (error) {
+      console.error('Error updating assignee:', error)
+      toast.error("An unexpected error occurred")
+    }
   }, [])
 
   const handleTaskEdit = useCallback((task: Task) => {
@@ -62,14 +75,22 @@ const KanbanBoard = ({ columns, tasks, assignees }: KanbanBoardProps) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Team Tasks</h1>
-        <TaskDialog
-          availableAssignees={assignees}
-        >
-          <Button className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Task
-          </Button>
-        </TaskDialog>
+        <div className="flex items-center gap-2">
+          <ColumnDialog>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Column
+            </Button>
+          </ColumnDialog>
+          <TaskDialog
+            availableAssignees={assignees}
+          >
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Task
+            </Button>
+          </TaskDialog>
+        </div>
       </div>
       
       <div className="flex gap-6 h-full min-h-[600px]">
@@ -78,6 +99,7 @@ const KanbanBoard = ({ columns, tasks, assignees }: KanbanBoardProps) => {
           return (
             <KanbanColumn 
               key={column.id}
+              columnId={column.id}
               title={column.title} 
               tasks={columnTasks} 
               count={columnTasks.length}

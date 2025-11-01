@@ -1,9 +1,13 @@
-import React from "react"
+import React, { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import TaskCard from "./task-card"
+import EditColumnDialog from "./edit-column-dialog"
+import { Settings } from "lucide-react"
 import type { Task, Assignee } from "@/types/task"
 
 interface KanbanColumnProps {
+  columnId: string
   title: string
   tasks: Task[]
   count: number
@@ -13,6 +17,7 @@ interface KanbanColumnProps {
 }
 
 const KanbanColumn = ({ 
+  columnId,
   title, 
   tasks, 
   count, 
@@ -20,15 +25,27 @@ const KanbanColumn = ({
   onAssigneeChange,
   onTaskEdit 
 }: KanbanColumnProps) => {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+
   return (
     <div className="flex-1">
       <Card className="h-full">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {title}
-            <span className="bg-muted rounded-full px-2 py-1 text-xs">
-              {count}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="bg-muted rounded-full px-2 py-1 text-xs">
+                {count}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => setIsEditDialogOpen(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -48,6 +65,13 @@ const KanbanColumn = ({
           )}
         </CardContent>
       </Card>
+
+      <EditColumnDialog
+        columnId={columnId}
+        columnTitle={title}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+      />
     </div>
   )
 }

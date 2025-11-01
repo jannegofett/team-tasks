@@ -1,8 +1,8 @@
 'use server'
 
-import { getColumns, getTasks, createTask, getAssignees, getTasksByColumn, updateTask as updateTaskQuery } from '@/lib/db/queries'
+import { getColumns, getTasks, createTask, getAssignees, getTasksByColumn, updateTask as updateTaskQuery, deleteTask, createColumn, updateColumn, deleteColumn } from '@/lib/db/queries'
 import { revalidatePath } from 'next/cache'
-import { createTaskSchema } from '@/lib/validations'
+import { createTaskSchema, createColumnSchema } from '@/lib/validations'
 import type { ZodError } from 'zod'
 import type { Column } from '@/lib/db/schema'
 
@@ -232,6 +232,143 @@ export async function updateTask(taskId: string, formData: FormData) {
   }
 }
 
+export async function updateTaskAssignee(taskId: string, assigneeId: string | null) {
+  try {
+    // Validate that the task exists
+    const tasks = await getTasks()
+    const taskExists = tasks.find(t => t.tasks.id === taskId)
+    if (!taskExists) {
+      console.error('Task not found:', taskId)
+      return { success: false, error: 'Task not found' }
+    }
+
+    // Validate assignee if provided
+    if (assigneeId) {
+      const assignees = await getAssignees()
+      const assigneeExists = assignees.find(a => a.id === assigneeId)
+      if (!assigneeExists) {
+        console.error('Assignee not found:', assigneeId)
+        return { success: false, error: 'Invalid assignee selected' }
+      }
+    }
+
+    try {
+      const updatedTask = await updateTaskQuery(taskId, { 
+        assigneeId,
+        updatedAt: new Date(),
+      })
+      
+      // Revalidate the page to show the updated task
+      revalidatePath('/')
+      
+      return { success: true, data: updatedTask }
+    } catch (updateError) {
+      console.error('Error in updateTaskQuery:', updateError)
+      throw updateError
+    }
+  } catch (error) {
+    console.error('Error updating task assignee:', error)
+    return { success: false, error: 'Failed to update task assignee' }
+  }
+}
+
 export async function revalidateBoard() {
   revalidatePath('/')
+}
+
+export async function createNewColumn(formData: FormData) {
+  try {
+    const rawData = {
+      title: formData.get('title') as string,
+    }
+
+    const validatedData = createColumnSchema.parse(rawData)
+
+    // Get all columns to calculate the next orderIndex
+    const existingColumns = await getColumns()
+    const nextOrderIndex = existingColumns.length > 0 
+      ? Math.max(...existingColumns.map((c) => c.orderIndex)) + 1
+      : 0
+
+    const columnData = {
+      title: validatedData.title,
+      orderIndex: nextOrderIndex,
+    }
+
+    console.log('Creating column with data:', columnData)
+
+    const newColumn = await createColumn(columnData)
+    console.log('Column created successfully:', newColumn)
+    
+    revalidatePath('/')
+    
+    return { success: true, data: newColumn }
+  } catch (error) {
+    if (error instanceof Error && 'issues' in error) {
+      return { success: false, error: 'Validation failed', details: (error as ZodError).issues }
+    }
+    console.error('Error creating column:', error)
+    return { success: false, error: 'Failed to create column' }
+  }
+}
+
+export async function updateColumnAction(columnId: string, formData: FormData) {
+  try {
+    const rawData = {
+      title: formData.get('title') as string,
+    }
+
+    const validatedData = createColumnSchema.parse(rawData)
+
+    const columnData = {
+      title: validatedData.title,
+    }
+
+    console.log('Updating column with data:', columnData)
+
+    const updatedColumn = await updateColumn(columnId, columnData)
+    console.log('Column updated successfully:', updatedColumn)
+    
+    revalidatePath('/')
+    
+    return { success: true, data: updatedColumn }
+  } catch (error) {
+    if (error instanceof Error && 'issues' in error) {
+      return { success: false, error: 'Validation failed', details: (error as ZodError).issues }
+    }
+    console.error('Error updating column:', error)
+    return { success: false, error: 'Failed to update column' }
+  }
+}
+
+export async function deleteColumnAction(columnId: string) {
+  try {
+    console.log('Deleting column:', columnId)
+
+    await deleteColumn(columnId)
+    console.log('Column deleted successfully')
+    
+    revalidatePath('/')
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting column:', error)
+    return { success: false, error: 'Failed to delete column' }
+  }
+}
+
+export async function deleteTaskAction(taskId: string) {
+  try {
+    console.log('Deleting task:', taskId)
+
+    await deleteTask(taskId)
+    console.log('Task deleted successfully')
+    
+    revalidatePath('/')
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting task:', error)
+    return { success: false, error: 'Failed to delete task' }
+  }
 }

@@ -27,12 +27,23 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User } from "lucide-react"
+import { User, Trash2 } from "lucide-react"
 import type { Task, Assignee } from "@/types/task"
 import { useTaskForm } from "@/hooks/use-task-form"
 import { getInitials } from "@/lib/utils"
 import { MOCK_ASSIGNEES } from "@/lib/constants"
-import { fetchColumns } from "@/lib/actions"
+import { fetchColumns, deleteTaskAction } from "@/lib/actions"
+import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface TaskDialogProps {
   children?: React.ReactNode
@@ -54,6 +65,8 @@ const TaskDialog = ({
   const [internalOpen, setInternalOpen] = useState(false)
   const [columns, setColumns] = useState<Array<{ id: string; title: string }>>([])
   const [isLoadingColumns, setIsLoadingColumns] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   
   const open = controlledOpen ?? internalOpen
   const setOpen = controlledOnOpenChange ?? setInternalOpen
@@ -89,14 +102,14 @@ const TaskDialog = ({
   }, [form])
 
   const handleOpenChange = useCallback((newOpen: boolean) => {
-    // Prevent closing while submitting
-    if (isSubmitting && !newOpen) return
+    // Prevent closing while submitting or deleting
+    if ((isSubmitting || isDeleting) && !newOpen) return
     
     setOpen(newOpen)
     if (!newOpen) {
       resetForm()
     }
-  }, [resetForm, setOpen, isSubmitting])
+  }, [resetForm, setOpen, isSubmitting, isDeleting])
 
   const handleFormSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
@@ -104,6 +117,26 @@ const TaskDialog = ({
     // Only close the dialog if there are no validation errors
     // The dialog will be closed programmatically on success
   }, [handleSubmit])
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!task) return
+
+    setIsDeleting(true)
+    const result = await deleteTaskAction(task.id)
+    setIsDeleting(false)
+
+    if (result.success) {
+      toast.success("Task deleted successfully!")
+      setIsDeleteDialogOpen(false)
+      setOpen(false)
+    } else {
+      toast.error(result.error || "Failed to delete task")
+    }
+  }, [task, setOpen])
+
+  const handleDeleteClick = useCallback(() => {
+    setIsDeleteDialogOpen(true)
+  }, [])
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -135,7 +168,7 @@ const TaskDialog = ({
                       placeholder="Enter task title..."
                       {...field}
                       className="w-full"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isDeleting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -154,7 +187,7 @@ const TaskDialog = ({
                       placeholder="Enter task description (optional)..."
                       {...field}
                       className="w-full"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isDeleting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -168,7 +201,7 @@ const TaskDialog = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Column</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isLoadingColumns}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isDeleting || isLoadingColumns}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={isLoadingColumns ? "Loading columns..." : columns.length > 0 ? "Select a column" : "No columns available"} />
@@ -199,7 +232,7 @@ const TaskDialog = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Assignee</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isDeleting}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select an assignee" />
@@ -239,31 +272,68 @@ const TaskDialog = ({
               )}
             />
 
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting || isLoadingColumns || columns.length === 0}>
-                {isSubmitting ? (
-                  <>
-                    <div className="me-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    {isEditing ? "Updating..." : "Creating..."}
-                  </>
-                ) : isLoadingColumns ? (
-                  "Loading..."
-                ) : (
-                  isEditing ? "Update Task" : "Create Task"
-                )}
-              </Button>
+            <div className="flex justify-between items-center gap-3 pt-4">
+              {isEditing && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteClick}
+                  disabled={isSubmitting || isDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Task
+                </Button>
+              )}
+              <div className="flex gap-3 ml-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  disabled={isSubmitting || isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting || isDeleting || isLoadingColumns || columns.length === 0}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="me-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      {isEditing ? "Updating..." : "Creating..."}
+                    </>
+                  ) : isLoadingColumns ? (
+                    "Loading..."
+                  ) : (
+                    isEditing ? "Update Task" : "Create Task"
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </Form>
       </DialogContent>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the task &quot;{task?.title}&quot;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }
